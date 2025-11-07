@@ -4,6 +4,7 @@
 
 import { Hono } from 'hono'
 import { serve } from '@hono/node-server'
+import { serveStatic } from '@hono/node-server/serve-static'
 import { cors } from 'hono/cors'
 import { database as _ } from './db/index.js'
 import * as UserModel from './db/models/users.js'
@@ -12,11 +13,17 @@ import { broadcastNewUser, setupSSERoute, getActiveConnectionCount } from './sse
 
 const app = new Hono()
 
-// Enable CORS for client requests
-app.use('/*', cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
-  credentials: true,
-}))
+// Enable CORS for client requests (needed in development when client runs on different port)
+// Serve static files from client build (production only)
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/*', cors({
+    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    credentials: true,
+  }))
+} else {
+  app.use('/*', serveStatic({ root: './client/dist' }))
+  app.get('/*', serveStatic({ path: './client/dist/index.html' }))
+}
 
 /**
  * POST /api/add-user - Add or update user profile (without avatar)
