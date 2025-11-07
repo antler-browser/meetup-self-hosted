@@ -1,0 +1,8 @@
+[build]
+builder = "NIXPACKS"
+buildCommand = "pnpm install && pnpm --filter @meetup/shared build && pnpm --filter @meetup/server build"
+
+[deploy]
+startCommand = "node server/dist/index.js"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
