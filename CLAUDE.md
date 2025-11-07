@@ -1,38 +1,86 @@
-# CLAUDE.md for Hello World Mini App
+# CLAUDE.md for Meetup Mini App
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
 
-A "Hello World" IRL Browser mini app demonstrating profile access via `window.irlBrowser` API with JWT verification. This mini app is meant to run inside an IRL Browser like Antler. See `/docs/irl-browser-standard.md` for IRL Browser Standard specification.
+An IRL Browser mini app for meetup check-ins with real-time attendee list. Uses `window.irlBrowser` API for profile access with JWT verification. This mini app is meant to run inside an IRL Browser like Antler. See `/docs/irl-browser-standard.md` for IRL Browser Standard specification.
+
+**Project Structure**: This is a pnpm workspace monorepo with three packages:
+- `client/` - React frontend (Vite)
+- `server/` - Hono backend with SSE
+- `shared/` - Shared JWT utilities used by both client and server
 
 ## Key Files and Directories
 
-- `/src/components/`: Components organized by feature
+### Client (`/client/`)
+- `/client/src/components/`: React components
   - `/QRCodePanel.tsx` - Shows a QR code for app. Hidden on mobile, visible on desktop.
   - `/Avatar.tsx` - Displays a user's avatar or placeholder if no avatar is set.
-- `/src/lib/`: Library / utility functions for common tasks
-  - `/jwt.ts` - JWT decoding and verification
-- `/src/app.tsx` - Main component with IRL Browser integration and profile display
-- `/src/main.tsx` - Entry point that renders App (initializes IRL Browser Simulator in dev mode)
-- `/public/`: Public files
+  - `/UserList.tsx` - Real-time list of meetup users
+- `/client/src/app.tsx` - Main component with IRL Browser integration and profile display
+- `/client/src/main.tsx` - Entry point that renders App (initializes IRL Browser Simulator in dev mode)
+- `/client/public/`: Public files
   - `irl-manifest.json` - Mini app IRL Browser manifest with metadata and requested permissions
   - `antler-icon.webp` - Mini app icon
+- `/client/vite.config.ts` - Vite configuration with proxy to backend
+
+### Server (`/server/`)
+- `/server/src/index.ts` - Hono server with check-in API and SSE for real-time updates
+- `/server/src/db/index.ts` - Database operations using Drizzle ORM
+- `/server/src/db/client.ts` - Database client with environment-aware connection (local SQLite or Turso)
+- `/server/src/db/models/index.ts` - Database models
+- `/server/src/db/schema.ts` - Drizzle schema definition for attendees table
+- `/server/src/db/migrations/` - Drizzle Kit migrations folder
+- `/server/drizzle.config.js` - Drizzle Kit configuration
+- `/server/.env.example` - Environment variables example
+- `/server/data/` - Local SQLite database file (development)
+- `/server/src/sse.ts` - Server-Sent Events (SSE) implementation for real-time updates
+
+### Shared (`/shared/`)
+- `/shared/src/jwt.ts` - JWT decoding and verification utilities (used by both client and server)
+- `/shared/src/index.ts` - Package exports
+
+### Root
 - `/docs/`: Documentation
   - `irl-browser-standard.md` - IRL Browser Standard specification
+- `data.json` - Meetup details (`scripts/update-metadata.js` takes details from this file and updates the client/public/irl-manifest.json and index.html files)
+- `pnpm-workspace.yaml` - Workspace configuration
 
 ## Development Commands
 
+All commands run from the workspace root:
+
 ```bash
-pnpm install       # Install dependencies
-pnpm run dev       # Start dev server (localhost:5173)
-pnpm run build     # TypeScript compile + Vite build
-pnpm run preview   # Preview production build
+pnpm install          # Install all workspace dependencies
+pnpm run dev          # Start both client (localhost:5173) and server (localhost:3000) in parallel
+pnpm run dev:client   # Start only client dev server
+pnpm run dev:server   # Start only server dev server
+pnpm run build        # Build shared package, then server, then client
 ```
+
+### Database Commands (from `/server/`)
+
+```bash
+pnpm db:generate      # Check schema and generate migration files
+pnpm db:push          # Run migrations
+pnpm db:studio        # Open Drizzle Studio visual database manager
+```
+
+**Note**: This is a pnpm workspace. All dependencies are installed at the root level. Shared dependencies (@noble/curves, base58-universal, jwt-decode) are hoisted to the workspace root.
 
 ## Architecture Overview
 
-### JWT Verification Pipeline (`/src/lib/jwt.ts`)
+### Database Architecture (Drizzle ORM + Turso)
+
+The application uses Drizzle ORM with an environment-aware database connection:
+
+**Development**: Local SQLite file at `/server/data/meetup.db` 
+**Production**: Turso remote database (update `DATABASE_DIALECT`, `DATABASE_URL` and `DATABASE_AUTH_TOKEN` environment variables in the Railway service)
+
+### JWT Verification Pipeline (`/shared/src/jwt.ts`)
+The shared package exports `decodeAndVerifyJWT` which is used by both client and server:
+
 1. Decode JWT with `jwt-decode`
 2. Extract issuer DID from `iss` claim
 3. Reject if JWT is expired (`exp` claim)
@@ -42,6 +90,8 @@ pnpm run preview   # Preview production build
 7. Return typed payload
 
 **Key detail**: Uses @noble/curves library for signature verification. (Cannot use Web Crypto APIs as most mobile browsers don't support Ed25519 yet.)
+
+**Import**: Both client and server import from `@meetup/shared` workspace package.
 
 ### Responsive Layout
 - **Mobile**: Single column, QR code hidden
@@ -68,23 +118,25 @@ That's it! The simulator will:
 - Click "Open as X" to open a new tab and simulate multiple users
 - Load a profile from the URL parameter `?irlProfile=<id>`
 
-### Testing on Antler with ngrok (optional)
-Ngrok creates a public URL that is useful for testing your locally running mini app on Antler.
-
-1. Run `ngrok http 5173`
-2. Add your ngrok URL to `vite.config.ts` allowedHosts
-3. Run `pnpm run dev` to start your local server
-4. Scan QR code with Antler app
-
 ## Third Party Libraries
 
-- **React**
-- **Tailwind**
+### Client
+- **React** - UI framework
+- **Tailwind** - CSS framework
+- **qrcode.react** - QR code generation
+- **irl-browser-simulator** - IRL Browser debugging (dev only)
+- **Vite** - Build tool
+
+### Server
+- **Hono** - Web framework
+- **@hono/node-server** - Node.js adapter
+- **Drizzle ORM** - TypeScript ORM for database operations
+- **@libsql/client** - LibSQL client (compatible with SQLite and Turso)
+
+### Shared (hoisted to workspace root)
 - **@noble/curves** - Ed25519 signature verification
 - **base58-universal** - Base58 encoding
 - **jwt-decode** - JWT decoding
-- **qrcode.react** - QR code generation
-- **irl-browser-simulator** - IRL Browser debugging
 
 ## Troubleshooting
 
