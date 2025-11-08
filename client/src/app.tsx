@@ -64,7 +64,7 @@ export function App() {
       // Add user to the database
       addUserToDatabase(profileJwt)
 
-      // Decode and verify the avatar JWT
+      // Decode and verify the profile JWT
       const profilePayload = await decodeAndVerifyJWT(profileJwt)
 
       if (!profilePayload) {
@@ -73,7 +73,6 @@ export function App() {
       }
 
       setProfile(profilePayload.data as User)
-      
 
     } catch (err) {
       console.error('Error loading profile:', err)
@@ -140,8 +139,7 @@ export function App() {
         throw new Error('Failed to check in')
       }
 
-      const data = await response.json()
-      console.log('✅ User added to database successfully:', data)
+      await response.json()
     } catch (err) {
       console.error('Error adding user to database:', err)
       // Don't show error to user, they'll still see the user list
@@ -162,8 +160,7 @@ export function App() {
         throw new Error('Failed to check in')
       }
 
-      const data = await response.json()
-      console.log('✅ User added to database successfully:', data)
+      await response.json()
     } catch (err) {
       console.error('Error adding user to database:', err)
       // Don't show error to user, they'll still see the user list
@@ -174,13 +171,8 @@ export function App() {
     try {
       const eventSource = new EventSource('/api/sse')
 
-      eventSource.addEventListener('connected', (event) => {
-        console.log('Connected to SSE:', event.data)
-      })
-
       eventSource.addEventListener('user-joined', (event) => {
         const user = JSON.parse(event.data) as User
-        console.log('New user joined:', user.name)
 
         // Add or update user in the list
         setUsers((prev) => {
@@ -193,6 +185,16 @@ export function App() {
             return [...prev, user]
           }
         })
+      })
+
+      eventSource.addEventListener('user-left', (event) => {
+        const { did } = JSON.parse(event.data) as { did: string }
+
+        // Remove user from the list
+        setUsers((prev) => prev.filter((u) => u.did !== did))
+
+        // If the selected user left, clear the selection
+        setSelectedUser((prev) => (prev?.did === did ? null : prev))
       })
 
       eventSource.addEventListener('heartbeat', () => {
@@ -300,7 +302,14 @@ export function App() {
 
   // Show user detail if a user is selected
   if (selectedUser) {
-    return <UserDetail user={selectedUser} onBack={() => setSelectedUser(null)} />
+    return (
+      <UserDetail
+        user={selectedUser}
+        onBack={() => setSelectedUser(null)}
+        isCurrentUser={profile?.did === selectedUser.did}
+        getProfileJwt={async () => await window.irlBrowser?.getProfileDetails()}
+      />
+    )
   }
 
   // Show profile and attendee list

@@ -13,6 +13,7 @@ import { type User } from './db/schema.js'
 export enum SSEEventType {
   CONNECTED = 'connected',
   USER_JOINED = 'user-joined',
+  USER_LEFT = 'user-left',
   HEARTBEAT = 'heartbeat',
   MEETUP_ENDED = 'meetup-ended',
 }
@@ -36,6 +37,16 @@ function buildUserJoinedEvent(user: User) {
   return {
     event: SSEEventType.USER_JOINED,
     data: JSON.stringify(user)
+  }
+}
+
+/**
+ * Build a user left event
+ */
+function buildUserLeftEvent(did: string) {
+  return {
+    event: SSEEventType.USER_LEFT,
+    data: JSON.stringify({ did })
   }
 }
 
@@ -80,6 +91,13 @@ function broadcastToAllClients(eventData: { event: SSEEventType; data: string })
  */
 export function broadcastNewUser(user: User) {
   broadcastToAllClients(buildUserJoinedEvent(user))
+}
+
+/**
+ * Broadcast user left to all connected SSE clients
+ */
+export function broadcastUserLeft(did: string) {
+  broadcastToAllClients(buildUserLeftEvent(did))
 }
 
 /**

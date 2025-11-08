@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Avatar } from './Avatar'
 import { SocialPlatform, getPlatforSVGIcon, getFullURL } from '@meetup/shared'
 export type { User }
@@ -14,6 +15,8 @@ interface User {
 interface UserDetailProps {
   user: User
   onBack: () => void
+  isCurrentUser?: boolean
+  getProfileJwt: () => Promise<string | undefined>
 }
 
 interface SocialLinkRowProps {
@@ -66,7 +69,44 @@ function SocialLinkRow({ platform, handle }: SocialLinkRowProps) {
   )
 }
 
-export function UserDetail({ user, onBack }: UserDetailProps) {
+export function UserDetail({ user, onBack, isCurrentUser, getProfileJwt }: UserDetailProps) {
+  const [isRemoving, setIsRemoving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleRemoveMyself = async () => {
+    const profileJwt = await getProfileJwt()
+    
+    if (!profileJwt) {
+      setError('No profile JWT available')
+      return
+    }
+
+    setIsRemoving(true)
+    setError(null)
+
+    try {
+      const response = await fetch('/api/remove-user', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ profileJwt }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Failed to remove user')
+      }
+
+      // Success - go back to the main view
+      onBack()
+    } catch (err) {
+      console.error('Error removing user:', err)
+      setError(err instanceof Error ? err.message : 'Failed to remove user')
+      setIsRemoving(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-white">
       {/* Close button */}
@@ -109,6 +149,24 @@ export function UserDetail({ user, onBack }: UserDetailProps) {
               )
             })}
           </div>
+        </div>
+      )}
+
+      {/* Remove Myself Button - Only shown for current user */}
+      {isCurrentUser && (
+        <div className="mt-8 max-w-md mx-auto px-6">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
+              {error}
+            </div>
+          )}
+          <button
+            onClick={handleRemoveMyself}
+            disabled={isRemoving}
+            className="text-center w-full text-red-600 hover:text-red-700 disabled:text-red-300 disabled:cursor-not-allowed transition-colors cursor-pointer"
+          >
+            {isRemoving ? 'Removing...' : 'Remove Myself from Meetup'}
+          </button>
         </div>
       )}
     </div>

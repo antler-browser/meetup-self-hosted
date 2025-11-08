@@ -9,7 +9,7 @@ import { cors } from 'hono/cors'
 import { database as _ } from './db/index.js'
 import * as UserModel from './db/models/users.js'
 import { decodeAndVerifyJWT } from '@meetup/shared'
-import { broadcastNewUser, setupSSERoute, getActiveConnectionCount } from './sse.js'
+import { broadcastNewUser, broadcastUserLeft, setupSSERoute, getActiveConnectionCount } from './sse.js'
 
 const app = new Hono()
 
@@ -55,8 +55,6 @@ app.post('/api/add-user', async (c) => {
     // Broadcast to all SSE clients
     broadcastNewUser(user)
 
-    console.log(`✅ ${name} profile upserted (DID: ${did})`)
-
     return c.json(user)
   } catch (error) {
     console.error('Add user error:', error)
@@ -97,13 +95,44 @@ app.post('/api/add-avatar', async (c) => {
     // Broadcast to all SSE clients
     broadcastNewUser(user)
 
-    console.log(`✅ Avatar upserted (DID: ${did})`)
-
     return c.json(user)
   } catch (error) {
     console.error('Add avatar error:', error)
     return c.json(
       { error: 'Failed to add avatar', message: (error as Error).message },
+      500
+    )
+  }
+})
+
+/**
+ * DELETE /api/remove-user - Remove user from meetup
+ * Requires JWT verification to ensure user is removing themselves
+ */
+app.delete('/api/remove-user', async (c) => {
+  try {
+    const body = await c.req.json()
+    const { profileJwt } = body
+
+    if (!profileJwt) {
+      return c.json({ error: 'Missing profileJwt' }, 400)
+    }
+
+    // Verify and decode the JWT to get the user's DID
+    const payload = await decodeAndVerifyJWT(profileJwt)
+    const did = payload.iss
+
+    // Delete the user from the database
+    await UserModel.deleteUserByDID(did)
+
+    // Broadcast to all SSE clients
+    broadcastUserLeft(did)
+
+    return c.json({ success: true, did })
+  } catch (error) {
+    console.error('Remove user error:', error)
+    return c.json(
+      { error: 'Failed to remove user', message: (error as Error).message },
       500
     )
   }

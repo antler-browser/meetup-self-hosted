@@ -34,6 +34,15 @@ export async function getUserByDID(did: string): Promise<User | undefined> {
 }
 
 /**
+ * Delete user by DID
+ */
+export async function deleteUserByDID(did: string): Promise<void> {
+  await db
+    .delete(users)
+    .where(eq(users.did, did))
+}
+
+/**
  * Upsert user profile (name and socials), preserves avatar on update
  */
 export async function addOrUpdateUser(
