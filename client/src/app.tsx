@@ -23,11 +23,24 @@ declare global {
   }
 }
 
+// Helper function to detect iOS or Android
+const isMobileDevice = () => {
+  const userAgent = navigator.userAgent || (window as any).opera || '';
+  
+  // Check for iOS
+  const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !(window as any).MSStream;
+  
+  // Check for Android
+  const isAndroid = /android/i.test(userAgent);
+  
+  return isIOS || isAndroid;
+}
+
 export function App() {
   const [profile, setProfile] = useState<User | null>(null)
   const [isIRLBrowser, setIsIRLBrowser] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [users, setUsers] = useState<User[]>([])
+  const [users, setUsers] = useState<User[] | null>(null)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
 
   useEffect(() => {
@@ -106,7 +119,7 @@ export function App() {
 
       // Merge fetched users with existing state (deduplicate by DID)
       setUsers((prev) => {
-        const merged = [...prev]
+        const merged = [...(prev ?? [])] as User[]
         if (merged.length === 0) { return fetchedUsers } // If no users, return the fetched users
         for (const user of fetchedUsers) {
           const existingIndex = merged.findIndex((u) => u.did === user.did)
@@ -176,13 +189,13 @@ export function App() {
 
         // Add or update user in the list
         setUsers((prev) => {
-          const exists = prev.find((u) => u.did === user.did)
+          const exists = prev?.find((u) => u.did === user.did)
           if (exists) {
             // Update existing user in place (keep position)
-            return prev.map((u) => (u.did === user.did ? user : u))
+            return prev?.map((u) => (u.did === user.did ? user : u)) ?? []
           } else {
             // Add new user to bottom
-            return [...prev, user]
+            return [...(prev ?? []), user]
           }
         })
       })
@@ -191,7 +204,7 @@ export function App() {
         const { did } = JSON.parse(event.data) as { did: string }
 
         // Remove user from the list
-        setUsers((prev) => prev.filter((u) => u.did !== did))
+        setUsers((prev) => prev?.filter((u) => u.did !== did) ?? [])
 
         // If the selected user left, clear the selection
         setSelectedUser((prev) => (prev?.did === did ? null : prev))
@@ -213,8 +226,20 @@ export function App() {
     }
   }
 
-  // Show fallback message if not in IRL Browser and no users are present
-  if (!isIRLBrowser && users.length === 0) {
+  // Show loading state while waiting for users query to complete
+  if (!users) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
+        <div className="grid md:grid-cols-2 min-h-screen">
+          <QRCodePanel />
+          <div className="flex items-center justify-center px-4"></div>
+        </div>
+      </div>
+    )
+  }
+
+  // Show fallback message user is scans with a regular browser (not an IRL Browser like Antler)
+  if (!isIRLBrowser && isMobileDevice()) {
     return (
       <div className="min-h-screen bg-white">
         <div className="grid md:grid-cols-2 min-h-screen">
@@ -288,18 +313,6 @@ export function App() {
     )
   }
 
-  // Show loading state while waiting for profile
-  if (!profile && users.length === 0) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
-        <div className="grid md:grid-cols-2 min-h-screen">
-          <QRCodePanel />
-          <div className="flex items-center justify-center px-4"></div>
-        </div>
-      </div>
-    )
-  }
-
   // Show user detail if a user is selected
   if (selectedUser) {
     return (
@@ -312,7 +325,7 @@ export function App() {
     )
   }
 
-  // Show profile and attendee list
+  // Show attendee list
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
       <div className="grid md:grid-cols-2 min-h-screen">
@@ -323,9 +336,6 @@ export function App() {
               <h1 className="text-4xl font-bold mb-6 text-gray-800">
                 Hey! {data.title}
               </h1>
-              <p className="text-xl text-gray-700 mb-2">
-                Scan the QR code and see who else is here!
-              </p>
             </div>
 
             {/* User List */}
