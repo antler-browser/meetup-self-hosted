@@ -2,6 +2,8 @@
 
 A mini app built with Antler IRL Browser that displays a list of everyone that scanned a QR code.
 
+**Note:** This repository is built to deploy to Cloudflare. For self-hosting, see [meetup-cloudflare](https://github.com/antler-browser/meetup-cloudflare). We recommend using Cloudflare because it works on Cloudflare's free tier.
+
 ## Overview
 
 This is a pnpm workspace monorepo with three packages:
