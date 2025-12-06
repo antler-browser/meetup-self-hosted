@@ -16,12 +16,12 @@
     "@libsql/client": "^0.15.15",
     "@meetup/shared": "workspace:*",
     "drizzle-orm": "^0.44.7",
-    "hono": "^4.10.4"
+    "hono": "^4.10.7"
   },
   "devDependencies": {
-    "@types/node": "^24.6.0",
-    "drizzle-kit": "^0.31.6",
-    "tsx": "^4.19.2",
+    "@types/node": "^24.10.1",
+    "drizzle-kit": "^0.31.8",
+    "tsx": "^4.21.0",
     "typescript": "~5.9.3"
   }
 }
