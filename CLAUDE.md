@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-An IRL Browser mini app for meetup check-ins with real-time attendee list. Uses `window.irlBrowser` API for profile access with JWT verification. This mini app is meant to run inside an IRL Browser like Antler. See `/docs/irl-browser-specification.md` for IRL Browser Specification specification.
+A Local First Auth mini app for meetup check-ins with real-time attendee list. Uses `window.localFirstAuth` API for profile access with JWT verification. This mini app is meant to run inside a Local First Auth app like Antler. See `/docs/local-first-auth-spec.md` for the Local First Auth specification.
 
 **Project Structure**: This is a pnpm workspace monorepo with three packages:
 - `client/` - React frontend (Vite)
@@ -18,10 +18,10 @@ An IRL Browser mini app for meetup check-ins with real-time attendee list. Uses 
   - `/QRCodePanel.tsx` - Shows a QR code for app. Hidden on mobile, visible on desktop.
   - `/Avatar.tsx` - Displays a user's avatar or placeholder if no avatar is set.
   - `/UserList.tsx` - Real-time list of meetup users
-- `/client/src/app.tsx` - Main component with IRL Browser integration and profile display
-- `/client/src/main.tsx` - Entry point that renders App (initializes IRL Browser Simulator in dev mode)
+- `/client/src/app.tsx` - Main component with Local First Auth integration and profile display
+- `/client/src/main.tsx` - Entry point that renders App (initializes Local First Auth Simulator in dev mode)
 - `/client/public/`: Public files
-  - `irl-manifest.json` - Mini app IRL Browser manifest with metadata and requested permissions
+  - `local-first-auth-manifest.json` - Mini app manifest with metadata and requested permissions
   - `antler-icon.webp` - Mini app icon
 - `/client/vite.config.ts` - Vite configuration with proxy to backend
 
@@ -43,8 +43,8 @@ An IRL Browser mini app for meetup check-ins with real-time attendee list. Uses 
 
 ### Root
 - `/docs/`: Documentation
-  - `irl-browser-specification.md` - IRL Browser Specification specification
-- `data.json` - Meetup details (`scripts/update-metadata.js` takes details from this file and updates the client/public/irl-manifest.json and index.html files)
+  - `local-first-auth-spec.md` - Local First Auth specification
+- `data.json` - Meetup details (`scripts/update-metadata.js` takes details from this file and updates the client/public/local-first-auth-manifest.json and index.html files)
 - `pnpm-workspace.yaml` - Workspace configuration
 
 ## Development Commands
@@ -107,20 +107,20 @@ The shared package exports `decodeAndVerifyJWT` which is used by both client and
 
 ## Development Workflow
 
-### Debugging IRL Browser Mini Apps
-The IRL Browser Simulator injects the `window.irlBrowser` API into a regular browser, allowing you to test your mini app locally without needing the Antler mobile app.
+### Debugging Local First Auth Mini Apps
+The Local First Auth Simulator injects the `window.localFirstAuth` API into a regular browser, allowing you to test your mini app locally without needing the Antler mobile app.
 
 **Note:** This is a development-only tool and should never be used in production.
 
 ```typescript
 if (import.meta.env.DEV) {
-  const simulator = await import('irl-browser-simulator')
-  simulator.enableIrlBrowserSimulator()
+  const simulator = await import('local-first-auth-simulator')
+  simulator.enableLocalFirstAuthSimulator()
 }
 ```
 
 That's it! The simulator will:
-- Inject `window.irlBrowser` into your page
+- Inject `window.localFirstAuth` into your page
 - Load a default test profile (Paul Morphy)
 - Show a floating debug panel
 - Click "Open as X" to open a new tab and simulate multiple users
@@ -132,7 +132,7 @@ That's it! The simulator will:
 - **React** - UI framework
 - **Tailwind** - CSS framework
 - **qrcode.react** - QR code generation
-- **irl-browser-simulator** - IRL Browser debugging (dev only)
+- **local-first-auth-simulator** - Local First Auth debugging (dev only)
 - **Vite** - Build tool
 
 ### Server
@@ -155,7 +155,7 @@ That's it! The simulator will:
 - Audience claim mismatch (must match production URL)
 
 ### Profile Not Loading
-Check if API exists: `console.log(window.irlBrowser)`
+Check if API exists: `console.log(window.localFirstAuth)`
 
 ### Build Errors
 - Run `pnpm install`

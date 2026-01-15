@@ -1,18 +1,18 @@
 import { useState, useEffect, useCallback } from 'react'
 import { decodeAndVerifyJWT } from '@meetup/shared'
-import { IrlOnboarding } from 'irl-browser-onboarding/react'
+import { Onboarding } from 'local-first-auth/react'
 import { QRCodePanel } from './components/QRCodePanel'
 import { UserList } from './components/UserList'
 import { UserDetail, type User } from './components/UserDetail'
 import data from '../../data.json'
 
-// TypeScript declarations for IRL Browser API
+// TypeScript declarations for Local First Auth API
 declare global {
   interface Window {
-    irlBrowser?: {
+    localFirstAuth?: {
       getProfileDetails(): Promise<string>;
       getAvatar(): Promise<string | null>;
-      getBrowserDetails(): {
+      getAppDetails(): {
         name: string;
         version: string;
         platform: 'ios' | 'android' | 'browser';
@@ -32,7 +32,7 @@ export function App() {
   const [users, setUsers] = useState<User[] | null>(null)
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
 
-  // Handler for when onboarding completes - now window.irlBrowser is available
+  // Handler for when onboarding completes - now window.localFirstAuth is available
   const handleOnboardingComplete = useCallback(() => {
     setShowOnboardingModal(false)
     setShowOnboarding(false)
@@ -41,9 +41,9 @@ export function App() {
   }, [])
 
   useEffect(() => {
-    // Check if window.irlBrowser is available (native app or returning web user)
-    const hasIrlBrowser = !!window.irlBrowser
-    setShowOnboarding(!hasIrlBrowser)
+    // Check if window.localFirstAuth is available (native app or returning web user)
+    const hasLocalFirstAuth = !!window.localFirstAuth
+    setShowOnboarding(!hasLocalFirstAuth)
 
     // Fetch all users from the database
     fetchUsers()
@@ -51,8 +51,8 @@ export function App() {
     // Connect to SSE for real-time updates
     const eventSource = connectToSSE()
 
-    // Only load profile if IRL Browser is available
-    if (hasIrlBrowser) {
+    // Only load profile if Local First Auth is available
+    if (hasLocalFirstAuth) {
       loadProfile()
       loadAvatar()
     }
@@ -65,12 +65,12 @@ export function App() {
 
   const loadProfile = async () => {
     try {
-      if (!window.irlBrowser) {
-        console.log('IRL Browser not found')
+      if (!window.localFirstAuth) {
+        console.log('Local First Auth not found')
         return
       }
       // Get profile details JWT
-      const profileJwt = await window.irlBrowser.getProfileDetails()
+      const profileJwt = await window.localFirstAuth.getProfileDetails()
 
       // Add user to the database
       addUserToDatabase(profileJwt)
@@ -93,11 +93,11 @@ export function App() {
 
   const loadAvatar = async () => {
     try {
-      if (!window.irlBrowser) {
+      if (!window.localFirstAuth) {
         return
       }
       // Get avatar separately (returns a signed JWT)
-      const avatarJWT = await window.irlBrowser.getAvatar()
+      const avatarJWT = await window.localFirstAuth.getAvatar()
       if (!avatarJWT) { return }
       addAvatarToDatabase(avatarJWT)
     } catch (err) {
@@ -261,7 +261,7 @@ export function App() {
         user={selectedUser}
         onBack={() => setSelectedUser(null)}
         isCurrentUser={profile?.did === selectedUser.did}
-        getProfileJwt={async () => await window.irlBrowser?.getProfileDetails()}
+        getProfileJwt={async () => await window.localFirstAuth?.getProfileDetails()}
       />
     )
   }
@@ -287,7 +287,7 @@ export function App() {
         </div>
       </div>
 
-      {/* Floating "Add yourself" button for mobile users without IRL Browser */}
+      {/* Floating "Add yourself" button for mobile users without Local First Auth */}
       {showOnboarding && (
         <button
           onClick={() => setShowOnboardingModal(true)}
@@ -307,7 +307,7 @@ export function App() {
           />
           {/* Modal content */}
           <div className="relative z-10 w-full max-w-lg mx-4 max-h-[90vh] overflow-auto rounded-2xl shadow-2xl">
-            <IrlOnboarding
+            <Onboarding
               mode="choice"
               onComplete={handleOnboardingComplete}
               customStyles={{ primaryColor: '#403B51' }}
